@@ -40,7 +40,7 @@ stackS (Sta palets n) newPalet | freeCellsS (Sta palets n) == 0 = error "The sta
 
 -- holdsS (Sta palets n) (Pal dest weight) (Rou route) = inOrderR dest destinationP (last palets)
 
-holdsS (Sta palets n) newPalet route = inOrderR route (destinationP(newPalet)) (destinationP (last palets))
+holdsS (Sta palets n) newPalet route = inOrderR route (destinationP newPalet) (destinationP (last palets))
 
 
 -- popS (Sta palets n) city | city /= destinationP (last palets) = error "The provided city isn't the destination of the palet at the top of the stack"
