@@ -29,7 +29,7 @@ removeAtIndex stacks newStacks idx i | i /= idx = removeAtIndex stacks (newStack
                                      | otherwise = removeAtIndex stacks newStacks idx (i+1)
                       
 --necesito ver a donde va el palet que quiero agregar y a donde va el ultimo palet de la pila al que quiero agregar. 
-loadT (Tru stacks route) palet = Tru ( (stackS ( (stacks !! getIndexBools(map (holdsS (stacks palet route)) 0)) palet ) ) : (removeAtIndex stacks [] getIndexBools(map (holdsS (stacks palet route)) 0) 0) ) route
+loadT (Tru stacks route) palet = Tru (stackS (stacks !! getIndexBools (map (holdsS (stacks palet route)) 0) palet : (removeAtIndex stacks [] getIndexBools(map (holdsS (stacks palet route)) 0) 0) route
 
 
 -- necesito ver qué stacks tienen palets cuyos
