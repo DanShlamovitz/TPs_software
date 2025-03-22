@@ -5,6 +5,7 @@ import Palet
 import Stack
 import Route
 
+
 data Truck = Tru [ Stack ] Route deriving (Eq, Show)
 
 newT :: Int -> Int -> Route -> Truck  -- construye un camion según una cantidad de bahias, la altura de las mismas y una ruta
@@ -25,15 +26,18 @@ getIndexBools bools i | i == length bools = error "This boolean list has no elem
                       | bools !! i == True = i
                       | otherwise = getIndexBools bools (i+1)
 
+removeAtIndex [] _ _ _ = []
 removeAtIndex stacks newStacks idx i | i /= idx = removeAtIndex stacks (newStacks ++ [stacks !! i]) idx (i+1)
                                      | otherwise = removeAtIndex stacks newStacks idx (i+1)
                       
 --necesito ver a donde va el palet que quiero agregar y a donde va el ultimo palet de la pila al que quiero agregar. 
-loadT (Tru stacks route) palet = Tru (stackS (stacks !! getIndexBools (map (holdsS (stacks palet route)) 0) palet : (removeAtIndex stacks [] getIndexBools(map (holdsS (stacks palet route)) 0) 0) route
+-- loadT (Tru stacks route) palet = Tru (stackS (stacks !! getIndexBools (map (holdsS (stacks palet route)) 0) palet : (removeAtIndex stacks [] getIndexBools(map (holdsS (stacks palet route)) 0) 0) route
+
+loadT (Tru stacks route) palet = Tru (removeAtIndex stacks [] (getIndexBools (map (\s -> holdsS s palet route) stacks) 0) 0 ++ [stackS (stacks !! getIndexBools (map (\s -> holdsS s palet route) stacks) 0) palet]) route
 
 
 -- necesito ver qué stacks tienen palets cuyos
-unloadT (Tru stacks route) city | elem city route == False = error "The provided city isn't a part of the provided truck's route"
-                                | otherwise = Tru (map popS stacks) route
+unloadT (Tru stacks route) city | elem city (getRoute route) == False = error "The provided city isn't a part of the provided truck's route"
+                                | otherwise = Tru (map (\s -> popS s city) stacks) route
 
 netT (Tru stacks route) = sum (map netS stacks)

@@ -25,7 +25,9 @@ stackS (Sta palets n) newPalet | freeCellsS (Sta palets n) == 0 = error "The sta
                                | netS (Sta palets n) + netP(newPalet) > 10 = error "The stack can't weigh more than 10 tons"
                                | otherwise = Sta (palets ++ [newPalet]) n
 
+holdsS (Sta [] _) _ _ = True
 holdsS (Sta palets n) newPalet route = inOrderR route (destinationP newPalet) (destinationP (last palets))
+
 
 popS (Sta palets n) city | city /= destinationP (last palets) = Sta palets n
                          | otherwise = popS(Sta (init palets) n) city
