@@ -13,7 +13,6 @@ netS :: Stack -> Int                      -- responde el peso neto de los palete
 holdsS :: Stack -> Palet -> Route -> Bool -- indica si la pila puede aceptar el palet considerando las ciudades en la ruta
 popS :: Stack -> String -> Stack          -- quita del tope los paletes con destino en la ciudad indicada
 
-
 newS n 
   | n <= 0 = error "The stack has to have at least one cell"
   | otherwise = Sta [] n
@@ -32,6 +31,6 @@ holdsS (Sta [] _) _ _ = True
 holdsS (Sta palets n) newPalet route = inOrderR route (destinationP newPalet) (destinationP (last palets))
 
 popS (Sta palets n) city 
+  | length palets == 0 = Sta palets n
   | city /= destinationP (last palets) = Sta palets n
   | otherwise = popS(Sta (init palets) n) city
-

@@ -119,28 +119,34 @@ t1 = newT 3 3 ruta1
 t2 = loadT t1 p1
 t3 = loadT t2 p2
 
+truck1 = newT 1 2 ruta1
+truck2 = loadT truck1 p1
+
+emptyT = newT 5 5 ruta1
+tr1 = newT 5 5 ruta1
+tr2 = loadT tr1 p1
+tr3 = loadT tr2 p2
+
+smallT = newT 1 1 ruta1
+smallT2 = loadT smallT p1
+
 testTruck = [
     testF (newT 0 0 ruta1),
     testF (newT (-1) 0 ruta1),
     not (testF (newT 3 3 ruta1)),
 
-    netT t1 == 5
-    -- netT t2 == 9
-    
+    netT t1 == 0,
+    netT t2 == 5,
+    netT t3 == 9,
 
-    -- testF (newT (-1) 0 ruta1),
-    -- not (testF (newT 3 3 ruta1)),
+    freeCellsT t1 == 9,
+    freeCellsT t3 == 7,
 
-    -- freeCellsT t1 == 9,
-    -- not (freeCellsT t1 == 0),
+    testF(loadT t1 pError), -- esto devuelve False pero debería devolver True. La realidad es que el llamado a la función sí tira excepción
+    not (testF(loadT t1 p1)),
+    testF(loadT truck2 p2),  -- esto devuelve False pero debería devolver True. La realidad es que el llamado a la función sí tira excepción
+    testF(loadT smallT2 p2),
 
-    -- netT t1 == 0,
-    -- netT t2 == 5,
-    -- netT t3 == 9,
-
-    -- testF(loadT t1 pError),
-    -- not (testF(loadT t1 p1)),
-
-    -- unloadT t3 "Cordoba" == t3,
-    -- unloadT t3 ba == t2,
+    testF(unloadT t3 "Cordoba"),
+    unloadT tr2 "Buenos Aires" == tr1
     ]

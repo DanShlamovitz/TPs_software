@@ -18,27 +18,28 @@ netT :: Truck -> Int                  -- responde el peso neto en toneladas de l
 getIndexBools :: [Bool] -> Int -> Int -- dada una lista de booleanos, indica el índice del primer True que aparece en la lista (utiliza un entero para realizar la recursión y poder iterar la lista)
 removeAtIndex :: [ a ] -> [ a ] -> Int -> Int -> [ a ] -- dada una lista y un índice, elimina el elemento que se encuentra en el índice determinado de la lista (usa otra lista y un entero para la recursión)
 
-newT n h route = Tru (replicate n (newS h)) route
+newT n h route 
+  | n <= 0 = error "The truck has to have at least one stack"
+  | otherwise = Tru (replicate n (newS h)) route
 
 freeCellsT (Tru stacks route) = sum (map freeCellsS stacks)
 
-getIndexBools bools i | i == length bools = error "This boolean list has no elements with a value of True"
+getIndexBools bools i | i == length bools = error "This truck has no stacks which can receive the incoming palet"
                       | bools !! i == True = i
                       | otherwise = getIndexBools bools (i+1)
 
 removeAtIndex [] _ _ _ = []
-removeAtIndex stacks newStacks idx i | i /= idx = removeAtIndex stacks (newStacks ++ [stacks !! i]) idx (i+1)
+removeAtIndex stacks newStacks idx i | i == length stacks = newStacks
+                                     | i /= idx = removeAtIndex stacks (newStacks ++ [stacks !! i]) idx (i+1)
                                      | otherwise = removeAtIndex stacks newStacks idx (i+1)
                       
---necesito ver a donde va el palet que quiero agregar y a donde va el ultimo palet de la pila al que quiero agregar. 
--- loadT (Tru stacks route) palet = Tru (stackS (stacks !! getIndexBools (map (holdsS (stacks palet route)) 0) palet : (removeAtIndex stacks [] getIndexBools(map (holdsS (stacks palet route)) 0) 0) route
 
-loadT (Tru stacks route) palet = Tru (removeAtIndex stacks [] (getIndexBools (map (\s -> holdsS s palet route) stacks) 0) 0 ++ [stackS (stacks !! getIndexBools (map (\s -> holdsS s palet route) stacks) 0) palet]) route
+loadT (Tru stacks route) palet
+  | freeCellsT (Tru stacks route) == 0 = error "This truck has no space left"
+  | otherwise = Tru (removeAtIndex stacks [] (getIndexBools (map (\s -> holdsS s palet route) stacks) 0) 0 ++ [stackS (stacks !! getIndexBools (map (\s -> holdsS s palet route) stacks) 0) palet]) route
 
 
--- necesito ver qué stacks tienen palets cuyos
 unloadT (Tru stacks route) city | elem city (getRoute route) == False = error "The provided city isn't a part of the provided truck's route"
                                 | otherwise = Tru (map (\s -> popS s city) stacks) route
 
 netT (Tru stacks route) = sum (map netS stacks)
-
