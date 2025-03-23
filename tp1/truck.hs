@@ -41,3 +41,4 @@ unloadT (Tru stacks route) city | elem city (getRoute route) == False = error "T
                                 | otherwise = Tru (map (\s -> popS s city) stacks) route
 
 netT (Tru stacks route) = sum (map netS stacks)
+
