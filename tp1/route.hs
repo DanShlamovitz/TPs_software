@@ -10,13 +10,22 @@ inRouteR :: Route -> String -> Bool -- indica si la ciudad consultada está en l
 newR cities | null(cities) == True = error "The city list has to contain at least one city"
             | otherwise = Rou cities
 
-inRouteR (Rou route) c1 | null(route) == True = False
-                  | route !! 0 == c1 = True
-                  | otherwise = inRouteR (Rou (tail route)) c1
+inRouteR (Rou []) _ = False
+inRouteR (Rou (x:xs)) c1   
+   | x == c1   = True
+   | otherwise = inRouteR (Rou xs) c1
 
--- Tal vez en inOrderR haya que devolver error o False si alguna de las dos (una o la otra) no esta en la ruta
-inOrderR (Rou route) c1 c2 | inRouteR (Rou route) c1 == False = error ("The city " ++ c1 ++ " isn't a part of the provided route")
-                           | inRouteR (Rou route) c2 == False = error ("The city " ++ c2 ++ " isn't a part of the provided route")
-                           | route !! 0 == c1 = True
-                           | route !! 0 == c2 = False
-                           | otherwise = inOrderR (Rou (tail route)) c1 c2
+
+inOrderR (Rou []) _ _ = error "Empty route encountered during inOrderR"
+inOrderR (Rou (x:xs)) c1 c2
+   | not (inRouteR (Rou (x:xs)) c1) = error ("The city " ++ c1 ++ " isn't a part of the provided route")
+   | not (inRouteR (Rou (x:xs)) c2) = error ("The city " ++ c2 ++ " isn't a part of the provided route")
+   | x == c1 = before c1 c2 xs
+   | otherwise = inOrderR (Rou xs) c1 c2
+
+before :: String -> String -> [String] -> Bool
+before _ _ [] = False
+before c1 c2 (c:cities)
+   | c == c1 = elem c2 cities
+   | c == c2 = False
+   | otherwise = before c1 c2 cities
