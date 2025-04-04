@@ -17,6 +17,7 @@ public class RingTest {
     }
 
     @Test void test02CurrentAfterAdd() {
+
         assertEquals( "Hola" , new Ring().add( "Hola" ).current() );
     }
 
