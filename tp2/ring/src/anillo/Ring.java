@@ -2,6 +2,29 @@ package anillo;
 
 import java.util.LinkedList;
 
+abstract class Node{
+    public Node next;
+    public Node prev;
+    public Object cargo;
+
+    public abstract Node add(Object cargo);
+    public abstract Node remove();
+    public abstract Node next();
+    public abstract Object current();
+
+}
+
+class EmptyNode extends Node {
+    public EmptyNode() {
+
+    }
+}
+
+class NodeWithSomething extends Node {
+    public NodeWithSomething(Object cargo) {}
+}
+
+
 public class Ring {
 
     private LinkedList<Object> ring = new LinkedList<>();
