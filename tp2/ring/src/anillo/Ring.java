@@ -1,70 +1,10 @@
 package anillo;
 
-abstract class Node {
-    public abstract Node add(Object cargo);
-    public abstract Node remove();
-    public abstract Node next();
-    public abstract Object current();
-}
-
-class EmptyNode extends Node {
-    public Node add(Object cargo) {
-        FullNode newNode = new FullNode(cargo);
-        newNode.next = newNode;
-        newNode.prev = newNode;
-        return newNode;
-    }
-
-    public Node remove() {
-        throw new RuntimeException("The ring is empty");
-    }
-
-    public Node next() {
-        throw new RuntimeException("The ring is empty");
-    }
-
-    public Object current() {
-        throw new RuntimeException("The ring is empty");
-    }
-}
-
-class FullNode extends Node {
-    Object cargo;
-    FullNode next;
-    FullNode prev;
-
-    public FullNode(Object cargo) {
-        this.cargo = cargo;
-    }
-
-    public Node add(Object newCargo) {
-        FullNode newNode = new FullNode(newCargo);
-        newNode.next = this;
-        newNode.prev = this.prev;
-        this.prev.next = newNode;
-        this.prev = newNode;
-        return newNode;
-    }
-    public Node remove() {
-        if (this.next == this) {
-            return new EmptyNode();
-        }
-        this.prev.next = this.next;
-        this.next.prev = this.prev;
-        return this.next;
-    }
-
-    public Node next() {
-        return this.next;
-    }
-
-    public Object current() {
-        return this.cargo;
-    }
-}
+import java.util.Stack;
 
 public class Ring {
-    private Node current = new EmptyNode();
+    Link current = new EmptyLink();
+    static final Stack<LinkFunc> actions = new Stack<>();
 
     public Ring next() {
         current = current.next();
@@ -83,5 +23,104 @@ public class Ring {
     public Ring remove() {
         current = current.remove();
         return this;
+    }
+
+    abstract class Link {
+        abstract Link add(Object cargo);
+        abstract Link remove();
+        abstract Link next();
+        abstract Object current();
+    }
+
+    class EmptyLink extends Link {
+        @Override
+        Link add(Object cargo) {
+            MultiLink newNode = new MultiLink(cargo);
+            newNode.next = newNode;
+            actions.push(new NullFunction());
+            return newNode;
+        }
+
+        @Override
+        Link remove() {
+            throw new RuntimeException("Ring is empty");
+        }
+
+        @Override
+        Link next() {
+            throw new RuntimeException("Ring is empty");
+        }
+
+        @Override
+        Object current() {
+            throw new RuntimeException("Ring is empty");
+        }
+    }
+
+    class MultiLink extends Link {
+        private final Object cargo;
+        Link next;
+
+        MultiLink(Object cargo) {
+            this.cargo = cargo;
+        }
+
+        @Override
+        Link add(Object newCargo) {
+            MultiLink newNode = new MultiLink(newCargo);
+            MultiLink prev = this;
+
+            while (prev.next != this) {
+                prev = (MultiLink) prev.next;
+            }
+
+            newNode.next = this;
+            prev.next = newNode;
+
+            actions.push(new RegularFunction());
+            return newNode;
+        }
+
+        @Override
+        Link remove() {
+            LinkFunc func = actions.pop();
+            return func.apply(this);
+        }
+
+        @Override
+        Link next() {
+            return next;
+        }
+
+        @Override
+        Object current() {
+            return cargo;
+        }
+    }
+
+    abstract class LinkFunc {
+        abstract Link apply(Link link);
+    }
+
+    class RegularFunction extends LinkFunc {
+        @Override
+        Link apply(Link link) {
+            MultiLink mn = (MultiLink) link;
+            MultiLink prev = mn;
+
+            while (prev.next != mn) {
+                prev = (MultiLink) prev.next;
+            }
+
+            prev.next = mn.next;
+            return mn.next;
+        }
+    }
+
+    class NullFunction extends LinkFunc {
+        @Override
+        Link apply(Link link) {
+            return new EmptyLink();
+        }
     }
 }
