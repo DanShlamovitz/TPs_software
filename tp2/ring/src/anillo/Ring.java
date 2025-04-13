@@ -35,10 +35,10 @@ public class Ring {
     class EmptyLink extends Link {
         @Override
         Link add(Object cargo) {
-            MultiLink newNode = new MultiLink(cargo);
-            newNode.next = newNode;
+            MultiLink newLink = new MultiLink(cargo);
+            newLink.next = newLink;
             actions.push(new NullFunction());
-            return newNode;
+            return newLink;
         }
 
         @Override
@@ -67,7 +67,7 @@ public class Ring {
 
         @Override
         Link add(Object newCargo) {
-            MultiLink newNode = new MultiLink(newCargo);
+            MultiLink newLink = new MultiLink(newCargo);
             MultiLink prev = this;
 
             while (prev.next != this) {
