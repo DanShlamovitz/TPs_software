@@ -7,7 +7,7 @@ public abstract class Card {
         this.color = color;
         this.symbol = symbol;
     }
-    public abstract TurnManager play(TurnManager turnManager);
+    public abstract void play(TurnManager turnManager);
     public String getSymbol() { return symbol; }
     public String getColor() { return color; }
     public boolean canBePlayedWith(Card card) {

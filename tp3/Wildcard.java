@@ -6,7 +6,7 @@ public class Wildcard extends Card{
         this.color = color;
         return this;
     }
-    public TurnManager play(TurnManager turnManager) {
+    public void play(TurnManager turnManager) {
         if (color.equals("Any")) {
             throw new RuntimeException("A Wildcard's color must be set before it is played!");
         }
@@ -15,6 +15,6 @@ public class Wildcard extends Card{
         int nextPlayerIndex = (turnManager.getCurrentPlayerIndex() + 1) %
                 turnManager.getNumberOfPlayers();
 
-        return turnManager.setCurrentPlayer(turnManager.getPlayers().get(nextPlayerIndex));
+        turnManager.setCurrentPlayer(turnManager.getPlayers().get(nextPlayerIndex));
     }
 }
