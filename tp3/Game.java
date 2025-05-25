@@ -5,20 +5,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 
-// CAMBIAR TurnManager POR Game??
-
 public class Game {
 
     private ArrayList<Player> players = new ArrayList<>();
     private Card lastCardPlayed;
     private ArrayList<Card> deck;
 
-//    public TurnManager(Player... players) {
-//        this(new Deck(), 7, players);
-//    }
-//    public TurnManager(Deck aDeck, int nOfCards, Player... players) {
-//        this(aDeck.cards, nOfCards, players);
-//    }
     public Game(ArrayList<Card> aDeck, int nOfCards, Player... players) {
         this.players = new ArrayList<>(Arrays.asList(players));
         deck = aDeck;
