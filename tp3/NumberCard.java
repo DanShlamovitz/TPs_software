@@ -1,13 +1,25 @@
 package uno;
 
 public class NumberCard extends Card{
-    public NumberCard(String color, String symbol) { super(color, symbol); }
-    public void play(TurnManager turnManager) {
-        turnManager.setLastCardPlayed(this);
-
-        int nextPlayerIndex = (turnManager.getCurrentPlayerIndex() + 1) %
-                turnManager.getNumberOfPlayers();
-
-        turnManager.setCurrentPlayer(turnManager.getPlayers().get(nextPlayerIndex));
+    private int number;
+    public NumberCard(String color, int number) {
+        this.number = number;
+        this.color = color;
+    }
+    public Game play(Game game) {
+        return game.playNumberCard(this);
+    }
+    public boolean likesNumber(int number) {
+        return this.number == number;
+    }
+    public boolean canBeStackedOnTopOf(Card card) {
+        return card.canReceiveCard(this);
+    }
+    public boolean canReceiveCard(Card card) {
+        return card.likesNumber(this.number) || card.getColor().equals(this.getColor());
+    }
+    public boolean equals(Card card) {
+        return card.likesNumber(this.number) && card.likesColor(this.getColor())
+                && card.getClass().equals(this.getClass());
     }
 }

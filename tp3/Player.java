@@ -2,39 +2,54 @@ package uno;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class Player {
 
     private ArrayList<Card> cards = new ArrayList<>();
     private String name;
+    private boolean shoutedUno;
 
-    public Player(String name) { this.name = name; }
-
-    public void checkForVictory() {
+    public Player(String name) {
+        this.name = name;
+        shoutedUno = false;
+    }
+    public Player(String name, ArrayList<Card> cards) {
+        this.name = name;
+        shoutedUno = false;
+        this.cards = cards;
+    }
+    public boolean checkForVictory() {
         if (cards.size() == 0) {
             System.out.println(this.name + " won the game!");
-            System.exit(0);
-        }
-    }
-    public boolean hasCard(Card card) {
-        for (Card c : cards) {
-            if (card == c) {
-                return true;
-            }
+            return true;
         }
         return false;
     }
-    public void setWildcardColor(Wildcard wildcard, String color) {
+    public boolean hasCard(Card card) {
+        return cards.stream().anyMatch(c -> c.equals(card));
+    }
+    public Player setWildcardColor(Wildcard wildcard, String color) {
         if ( !hasCard(wildcard) ) {
-            throw new RuntimeException("The requested wildcard doesn't belong to this player!");
+            throw new RuntimeException("This player has no wildcards!");
         }
         wildcard.setColor(color);
+        return this;
     }
-    public Player drawCards(Deck deck, int nOfCards) {
-        cards.addAll(deck.draw(nOfCards));
+    public Player drawCard(Game game) {
+        this.cards.add(game.draw());
+        return this;
+    }
+    public Player shoutUno() {
+        shoutedUno = true;
+        return this;
+    }
+    public Player resetUnoShout() {
+        shoutedUno = false;
         return this;
     }
     public String getName() { return name; }
     public ArrayList<Card> getCards() { return cards; }
+    public boolean shoutedUno() { return shoutedUno; }
 }

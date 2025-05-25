@@ -1,177 +1,359 @@
 package uno;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+import java.util.*;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TestUno {
 
-    @Test
-    public void testPlayCardSubtractsCardAndMovesTurn() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        Player proca = new Player("Proca");
-        Player juansua = new Player("Juansua");
-
-        TurnManager game = new TurnManager(aaron, felpa, proca, juansua);
-        assertEquals(game.getCurrentPlayer(), aaron);
-        System.out.println(aaron.getCards().getFirst().getSymbol());
-
-        game.playerPlayCard(aaron, aaron.getCards().getFirst());
-        assertEquals(6, aaron.getCards().size());
-        assertEquals(felpa, game.getCurrentPlayer());
-
-    }
-    @Test
-    public void testGameInitialization() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        Player proca = new Player("Proca");
-        Player juansua = new Player("Juansua");
-
-        TurnManager game = new TurnManager(aaron, felpa, proca, juansua);
-
-        // Check that all players have 7 cards initially
-        for (Player player : game.getPlayers()) {
-            assertEquals(7, player.getCards().size());
+    private String aaron = "Aaron";
+    private String felpa = "Felpa";
+    private String dan = "Dan";
+    private String red = "Red";
+    private String blue = "Blue";
+    private String green = "Green";
+    private String yellow = "Yellow";
+    private ArrayList<Card> createDeck() {
+        ArrayList<Card> deck = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            deck.add(new NumberCard(red, i % 10));
+            deck.add(new NumberCard(blue, i % 10));
+            deck.add(new NumberCard(green, i % 10));
+            deck.add(new NumberCard(yellow, i % 10));
         }
+        deck.add(new SkipCard(red));
+        deck.add(new SkipCard(blue));
+        deck.add(new DrawTwoCard(red));
+        deck.add(new DrawTwoCard(blue));
+        deck.add(new ReverseCard(red));
+        deck.add(new ReverseCard(blue));
+        deck.add(new Wildcard());
+        deck.add(new Wildcard());
+        return deck;
+    }
 
-        // The first player should be assigned as the current player
-        assertEquals(aaron, game.getCurrentPlayer());
+    private Player createPlayerWithCards(String name, Card... cards) {
+        ArrayList<Card> cardList = new ArrayList<>(Arrays.asList(cards));
+        return new Player(name, cardList);
+    }
+    @Test
+    void testGameCreatedCorrectly() {
+        ArrayList<Card> deck = createDeck();
+        Player player1 = new Player(aaron);
+        Player player2 = new Player(felpa);
 
-        // NoCard is initially the last card played
-        assertEquals("NoCard", game.getLastCardPlayed().getSymbol());
+        Game game = new Game(deck, 7, player1, player2);
+
+        assertNotNull(game);
+        assertEquals(2, game.getPlayers().size());
+        assertEquals(aaron, game.getCurrentPlayer().getName());
+        assertNotNull(game.getLastCardPlayed());
     }
 
     @Test
-    public void testPlayCardAndMoveTurn() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        TurnManager game = new TurnManager(aaron, felpa);
+    void testTurnManagement() {
+        ArrayList<Card> deck = createDeck();
+        NumberCard redFive = new NumberCard(red, 5);
+        NumberCard redSix = new NumberCard(red, 6);
 
-        int initialAaronCards = aaron.getCards().size();
+        Player player1 = createPlayerWithCards(aaron, redFive);
+        Player player2 = createPlayerWithCards(felpa, redSix);
 
-        // Play a card
-        game.playerPlayCard(aaron, aaron.getCards().getFirst());
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+        assertEquals(aaron, game.getCurrentPlayer().getName());
 
-        // Check that the card was removed from Aaron's hand
-        assertEquals(initialAaronCards - 1, aaron.getCards().size());
-
-        // The turn should move to Felpa
-        assertEquals(felpa, game.getCurrentPlayer());
+        game.playerPlayCard(player1, redFive);
+        assertEquals(felpa, game.getCurrentPlayer().getName());
     }
 
     @Test
-    public void testDrawTwoEffect() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        TurnManager game = new TurnManager(aaron, felpa);
+    void testCardCompatibility() {
+        NumberCard redFive = new NumberCard(red, 5);
+        NumberCard redSeven = new NumberCard(red, 7);
+        NumberCard blueFive = new NumberCard(blue, 5);
+        NumberCard blueEight = new NumberCard(blue, 8);
+        SkipCard redSkip = new SkipCard(red);
+        Wildcard wildcard = new Wildcard().setColor(green);
 
-        // Play a Draw Two card
-        DrawTwoCard drawTwoCard = new DrawTwoCard("red");
-        aaron.getCards().add(drawTwoCard);
-        game.playerPlayCard(aaron, drawTwoCard);
-
-        // Check that Felpa drew two cards
-        assertEquals(9, felpa.getCards().size()); // 7 initial + 2 drawn
-
-        // The turn should move back to Aaron (Draw Two skips the next player)
-        assertEquals(aaron, game.getCurrentPlayer());
+        assertTrue(redSeven.canBeStackedOnTopOf(redFive));
+        assertTrue(blueFive.canBeStackedOnTopOf(redFive));
+        assertFalse(blueEight.canBeStackedOnTopOf(redFive));
+        assertTrue(redSkip.canBeStackedOnTopOf(redFive));
+        assertTrue(wildcard.canBeStackedOnTopOf(redFive));
     }
 
     @Test
-    public void testSkipCardEffect() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        Player proca = new Player("Proca");
-        TurnManager game = new TurnManager(aaron, felpa, proca);
+    void testInvalidPlays() {
+        ArrayList<Card> deck = createDeck();
+        NumberCard redFive = new NumberCard(red, 5);
+        NumberCard blueEight = new NumberCard(blue, 8);
 
-        // Play a Skip card
-        SkipCard skipCard = new SkipCard("blue");
-        aaron.getCards().add(skipCard);
-        game.playerPlayCard(aaron, skipCard);
+        Player player1 = createPlayerWithCards(aaron, redFive);
+        Player player2 = createPlayerWithCards(felpa, blueEight);
 
-        // The next player should be Proca, skipping Felpa
-        assertEquals(proca, game.getCurrentPlayer());
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(green, 3));
+
+        int initialCards = player1.getCards().size();
+
+        game.playerPlayCard(player1, redFive);
+
+        assertEquals(initialCards + 1, player1.getCards().size());
+        assertTrue(player1.getCards().contains(redFive));
     }
 
     @Test
-    public void testReverseCardEffect() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        Player proca = new Player("Proca");
-        TurnManager game = new TurnManager(aaron, felpa, proca);
+    void testPlayingOutOfTurn() {
+        ArrayList<Card> deck = createDeck();
+        NumberCard redFive = new NumberCard(red, 5);
+        NumberCard redSix = new NumberCard(red, 6);
 
-        // Play a Reverse card
-        ReverseCard reverseCard = new ReverseCard("yellow");
-        aaron.getCards().add(reverseCard);
-        game.playerPlayCard(aaron, reverseCard);
+        Player player1 = createPlayerWithCards(aaron, redFive);
+        Player player2 = createPlayerWithCards(felpa, redSix);
 
-        // The turn order should be reversed, and the next player should be Proca
-        assertEquals(proca, game.getCurrentPlayer());
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+
+        game.playerPlayCard(player1, redFive);
+
+        int player1InitialCards = player1.getCards().size();
+
+        game.playerPlayCard(player1, new NumberCard(red, 7));
+
+        assertEquals(player1InitialCards + 1, player1.getCards().size());
     }
 
     @Test
-    public void testWildcardColorSelection() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        TurnManager game = new TurnManager(aaron, felpa);
+    void testUnoPenalty() {
+        ArrayList<Card> deck = createDeck();
+        NumberCard redFive = new NumberCard(red, 5);
 
-        // Play a Wildcard
+        Player player1 = createPlayerWithCards(aaron, redFive);
+        Player player2 = createPlayerWithCards(felpa, new NumberCard(blue, 6));
+
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+
+        game.playerPlayCard(player1, redFive);
+
+        Player player3 = createPlayerWithCards("Player3", redFive, new NumberCard(red, 6));
+        Game game2 = new Game(createDeck(), 7, player3, player2);
+        game2.setLastCardPlayed(new NumberCard(red, 4));
+
+        int initialCards = player3.getCards().size();
+        game2.playerPlayCard(player3, redFive);
+
+        assertEquals(initialCards + 1, player3.getCards().size());
+    }
+
+    @Test
+    void testUnoShoutPreventsPenalty() {
+        ArrayList<Card> deck = createDeck();
+        NumberCard redFive = new NumberCard(red, 5);
+        NumberCard redSix = new NumberCard(red, 6);
+
+        Player player1 = createPlayerWithCards(aaron, redFive, redSix);
+        Player player2 = createPlayerWithCards(felpa, new NumberCard(blue, 6));
+
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+
+        player1.shoutUno();
+
+        int initialCards = player1.getCards().size();
+        game.playerPlayCard(player1, redFive);
+
+        assertEquals(initialCards - 1, player1.getCards().size());
+    }
+
+    @Test
+    void testVictoryCondition() {
+        ArrayList<Card> deck = createDeck();
+        NumberCard redFive = new NumberCard(red, 5);
+
+        Player player1 = createPlayerWithCards(aaron, redFive);
+        Player player2 = createPlayerWithCards(felpa, new NumberCard(blue, 6));
+
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+        game.playerPlayCard(player1, redFive);
+        assertTrue(player1.checkForVictory());
+    }
+
+    @Test
+    void testSkipCard() {
+        ArrayList<Card> deck = createDeck();
+        SkipCard redSkip = new SkipCard(red);
+
+        Player player1 = createPlayerWithCards(aaron, redSkip);
+        Player player2 = createPlayerWithCards(felpa, new NumberCard(blue, 6));
+        Player player3 = createPlayerWithCards(dan, new NumberCard(green, 7));
+
+        Game game = new Game(deck, 7, player1, player2, player3);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+
+        game.playerPlayCard(player1, redSkip);
+
+        assertEquals(dan, game.getCurrentPlayer().getName());
+    }
+
+    @Test
+    void testDrawTwoCard() {
+        ArrayList<Card> deck = createDeck();
+        DrawTwoCard redDrawTwo = new DrawTwoCard(red);
+
+        Player player1 = createPlayerWithCards(aaron, redDrawTwo);
+        Player player2 = createPlayerWithCards(felpa, new NumberCard(blue, 6));
+        Player player3 = createPlayerWithCards(dan, new NumberCard(green, 7));
+
+        Game game = new Game(deck, 7, player1, player2, player3);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+
+        int player2InitialCards = player2.getCards().size();
+
+        game.playerPlayCard(player1, redDrawTwo);
+
+        assertEquals(player2InitialCards + 2, player2.getCards().size());
+        assertEquals(dan, game.getCurrentPlayer().getName());
+    }
+
+    @Test
+    void testWildcardColorRequired() {
+        ArrayList<Card> deck = createDeck();
         Wildcard wildcard = new Wildcard();
-        aaron.getCards().add(wildcard);
-        aaron.setWildcardColor(wildcard, "red");
-        game.playerPlayCard(aaron, wildcard);
 
-        // Verify the last card played is the wildcard with the correct color
-        assertEquals(wildcard, game.getLastCardPlayed());
-        assertEquals("red", game.getLastCardPlayed().getColor());
+        Player player1 = createPlayerWithCards(aaron, wildcard);
+        Player player2 = createPlayerWithCards(felpa, new NumberCard(blue, 6));
 
-        // The turn should move to the next player
-        assertEquals(felpa, game.getCurrentPlayer());
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+
+        assertThrows(RuntimeException.class, () -> {
+            game.playerPlayCard(player1, wildcard);
+        });
     }
 
     @Test
-    public void testPlayerVictory() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        TurnManager game = new TurnManager(aaron, felpa);
+    void testWildcardCompatibility() {
+        ArrayList<Card> deck = createDeck();
+        Wildcard wildcard = new Wildcard();
+        NumberCard greenFive = new NumberCard(green, 5);
+        NumberCard redSix = new NumberCard(red, 6);
 
-        // Remove all but one card from Aaron's hand
-        while (aaron.getCards().size() > 1) {
-            aaron.getCards().removeFirst();
-        }
+        Player player1 = createPlayerWithCards(aaron, wildcard);
+        player1.setWildcardColor(wildcard, green);
+        Player player2 = createPlayerWithCards(felpa, greenFive, redSix);
 
-        // Play the last card
-        Card lastCard = aaron.getCards().getFirst();
-        game.playerPlayCard(aaron, lastCard);
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+        game.playerPlayCard(player1, wildcard);
+        game.playerPlayCard(player2, greenFive);
 
-        // Aaron should win and the game should end
-        assertEquals(0, aaron.getCards().size());
+        assertEquals(aaron, game.getCurrentPlayer().getName());
     }
 
     @Test
-    public void testInvalidTurnPlay() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        TurnManager game = new TurnManager(aaron, felpa);
+    void testWildcardColorSetting() {
+        Wildcard wildcard = new Wildcard();
+        Player player1 = createPlayerWithCards(aaron, new Wildcard());
+        Player player2 = createPlayerWithCards(felpa, new ReverseCard(blue));
 
-        Card card = felpa.getCards().get(0);
+        assertEquals("Any", wildcard.getColor());
 
-        // Try to play a card out of turn
-        assertThrows(RuntimeException.class, () -> game.playerPlayCard(felpa, card));
+        player1.setWildcardColor(wildcard, blue);
+        assertEquals(blue, wildcard.getColor());
+
+        Wildcard otherWildcard = new Wildcard();
+        assertThrows(RuntimeException.class, () -> {
+            player2.setWildcardColor(otherWildcard, red);
+        });
     }
 
     @Test
-    public void testInvalidCardPlay() {
-        Player aaron = new Player("Aaron");
-        Player felpa = new Player("Felpa");
-        TurnManager game = new TurnManager(aaron, felpa);
+    void testReverseCard() {
+        ArrayList<Card> deck = createDeck();
+        ReverseCard redReverse = new ReverseCard(red);
 
-        // Create a card that Aaron doesn't have
-        DrawTwoCard invalidCard = new DrawTwoCard("green");
+        Player player1 = createPlayerWithCards(aaron, redReverse);
+        Player player2 = createPlayerWithCards(felpa, new NumberCard(blue, 6));
+        Player player3 = createPlayerWithCards(dan, new NumberCard(green, 7));
 
-        // Try to play an invalid card
-        assertThrows(RuntimeException.class, () -> game.playerPlayCard(aaron, invalidCard));
+        Game game = new Game(deck, 7, player1, player2, player3);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+
+        assertEquals(aaron, game.getPlayers().get(0).getName());
+        assertEquals(felpa, game.getPlayers().get(1).getName());
+        assertEquals(dan, game.getPlayers().get(2).getName());
+
+        game.playerPlayCard(player1, redReverse);
+
+        assertEquals(dan, game.getPlayers().get(0).getName());
+        assertEquals(felpa, game.getPlayers().get(1).getName());
+        assertEquals(aaron, game.getPlayers().get(2).getName());
     }
 
+    @Test
+    void testUnoShoutWithOneCard() {
+        ArrayList<Card> deck = createDeck();
+        NumberCard redFive = new NumberCard(red, 5);
+
+        Player player1 = createPlayerWithCards(aaron, redFive);
+
+        player1.shoutUno();
+        assertTrue(player1.shoutedUno());
+
+        player1.resetUnoShout();
+        assertFalse(player1.shoutedUno());
+    }
+
+    @Test
+    void testPlayerDoesntHaveCard() {
+        ArrayList<Card> deck = createDeck();
+        NumberCard redFive = new NumberCard(red, 5);
+        NumberCard blueSix = new NumberCard(blue, 6);
+
+        Player player1 = createPlayerWithCards(aaron, redFive);
+        Player player2 = createPlayerWithCards(felpa, new NumberCard(blue, 7));
+
+        Game game = new Game(deck, 7, player1, player2);
+        game.setLastCardPlayed(new NumberCard(red, 4));
+
+        assertThrows(RuntimeException.class, () -> {
+            game.playerPlayCard(player1, blueSix);
+        });
+    }
+
+    @Test
+    void testEmptyDeck() {
+        ArrayList<Card> emptyDeck = new ArrayList<>();
+        Player player1 = new Player(aaron);
+
+        assertThrows(NoSuchElementException.class, () -> {
+            new Game(emptyDeck, 7, player1);
+        });
+    }
+
+    @Test
+    void testSpecialCardCompatibility() {
+        SkipCard redSkip = new SkipCard(red);
+        SkipCard blueSkip = new SkipCard(blue);
+        DrawTwoCard redDrawTwo = new DrawTwoCard(red);
+        ReverseCard redReverse = new ReverseCard(red);
+
+        assertTrue(blueSkip.canBeStackedOnTopOf(redSkip));
+
+        assertTrue(redDrawTwo.canBeStackedOnTopOf(redSkip));
+        assertTrue(redReverse.canBeStackedOnTopOf(redSkip));
+    }
+
+    @Test
+    void testMultipleWildcards() {
+        Wildcard wildcard1 = new Wildcard().setColor(red);
+        Wildcard wildcard2 = new Wildcard().setColor(blue);
+
+        assertTrue(wildcard2.canBeStackedOnTopOf(wildcard1));
+        assertTrue(wildcard1.canBeStackedOnTopOf(wildcard2));
+    }
 }

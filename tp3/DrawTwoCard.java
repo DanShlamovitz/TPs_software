@@ -1,18 +1,22 @@
 package uno;
 
 public class DrawTwoCard extends Card{
-    public DrawTwoCard(String color) { super(color, "Draw Two"); }
-    public void play(TurnManager turnManager) {
-        turnManager.setLastCardPlayed(this);
-
-        int skippedPlayerIndex = (turnManager.getCurrentPlayerIndex() + 1)
-                % turnManager.getNumberOfPlayers();
-
-        int nextPlayerIndex = (turnManager.getCurrentPlayerIndex() + 2)
-                % turnManager.getNumberOfPlayers();
-
-        turnManager.getPlayers().get(skippedPlayerIndex).drawCards(turnManager.getDeck(), 2);
-
-        turnManager.setCurrentPlayer(turnManager.getPlayers().get(nextPlayerIndex));
+    public DrawTwoCard(String color) {
+        this.color = color;
+    }
+    public Game play(Game game) {
+        return game.playDrawTwoCard(this);
+    }
+    public boolean canReceiveCard(Card card) {
+        return likesColor(card.getColor()) || this.getClass().equals(card.getClass());
+    }
+    public boolean canBeStackedOnTopOf(Card card) {
+        return card.canReceiveCard(this);
+    }
+    public boolean likesNumber(int number) {
+        return false;
+    }
+    public boolean equals(Card card) {
+        return likesColor(card.getColor()) && this.getClass().equals(card.getClass());
     }
 }
