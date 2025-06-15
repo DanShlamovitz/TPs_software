@@ -1,95 +1,187 @@
 package com.example.unoapi.controller;
 
-import com.example.unoapi.model.*;
 import com.example.unoapi.service.UnoService;
-import com.example.unoapi.service.Dealer;
-import com.example.unoapi.service.exceptions.*;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.example.unoapi.model.JsonCard;
+import com.example.unoapi.model.Card;
+import com.example.unoapi.model.NumberCard;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(UnoController.class)
-class UnoControllerTest {
-
+@SpringBootTest
+@AutoConfigureMockMvc
+public class UnoControllerTest {
+    
     @Autowired
     private MockMvc mockMvc;
-
+    
     @MockBean
     private UnoService unoService;
-
-    @MockBean
-    private Dealer dealer;
-
+    
     @Autowired
     private ObjectMapper objectMapper;
-
+    
     private UUID testMatchId;
-    private List<Card> testHand;
+    private String testPlayer;
 
     @BeforeEach
     void setUp() {
-        when(dealer.fullDeck()).thenReturn(UnoService.fullDeck());
-        
         testMatchId = UUID.randomUUID();
-        testHand = Arrays.asList(
-            new NumberCard("red", 1),
-            new NumberCard("blue", 2),
-            new SkipCard("green")
-        );
+        testPlayer = "Player1";
     }
 
     @Test
-    void playWrongTurnTest() throws Exception {
-        String uuid = newGame(); // crear un juego con 2 jugadores
+    public void activeCardReturnsJsonCard() throws Exception {
+        Card mockCard = new NumberCard("Blue", 3);
+        when(unoService.activeCard(testMatchId)).thenReturn(mockCard);
 
-        List<JsonCard> hand = playerHand(uuid);
+        mockMvc.perform(get("/activecard/{matchId}", testMatchId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.color").value("Blue"))
+                .andExpect(jsonPath("$.number").value(3));
+    }
 
-        // Mock the service to throw the not player turn exception
-        doThrow(new RuntimeException(Player.NotPlayersTurn + "B"))
-                .when(unoService).play(any(UUID.class), eq("B"), any(JsonCard.class));
+    @Test
+    public void newMatchWithTwoPlayers() throws Exception {
+        UUID expectedId = UUID.randomUUID();
+        when(unoService.newMatch(any(List.class))).thenReturn(expectedId);
 
-        String resp = mockMvc.perform(post("/play/" + uuid + "/B")
+        mockMvc.perform(post("/newmatch")
+                .param("players", "Alice", "Bob"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("\"" + expectedId.toString() + "\""));
+    }
+
+    @Test
+    public void drawCardIncrementsHand() throws Exception {
+        mockMvc.perform(post("/draw/{matchId}/{player}", testMatchId, testPlayer))
+                .andExpect(status().isOk());
+
+        verify(unoService).drawCard(testMatchId, testPlayer);
+    }
+
+    @Test
+    public void playCardWithValidData() throws Exception {
+        JsonCard jsonCard = new JsonCard("Green", 7, "NumberCard", false);
+
+        mockMvc.perform(post("/play/{matchId}/{player}", testMatchId, testPlayer)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(hand.get(0).toString()))
-                .andDo(print())
-                .andExpect(status().is(500))
-                .andReturn().getResponse().getContentAsString();
+                .content(objectMapper.writeValueAsString(jsonCard)))
+                .andExpect(status().isOk());
 
-        assertTrue(resp.contains(Player.NotPlayersTurn + "B"));
+        verify(unoService).play(eq(testMatchId), eq(testPlayer), any(Card.class));
     }
 
-    private String newGame() throws Exception {
-        when(unoService.newMatch(anyList())).thenReturn(testMatchId);
-        
-        String resp = mockMvc.perform(post("/newmatch?players=A&players=B"))
-                .andExpect(status().is(200))
-                .andReturn().getResponse().getContentAsString();
-        return new ObjectMapper().readTree(resp).asText();
+    @Test
+    public void playerHandReturnsCards() throws Exception {
+        List<Card> mockHand = List.of(
+            new NumberCard("Red", 5),
+            new NumberCard("Yellow", 8)
+        );
+        when(unoService.playerHand(testMatchId)).thenReturn(mockHand);
+
+        mockMvc.perform(get("/playerhand/{matchId}", testMatchId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
-    private List<JsonCard> playerHand(String uuid) throws Exception {
-        // Mock the service to return our test hand
-        when(unoService.playerHand(any(UUID.class))).thenReturn(testHand);
-        String resp = mockMvc.perform(get("/playerhand/" + uuid))
-                .andExpect(status().is(200))
-                .andReturn().getResponse().getContentAsString();
-        return new ObjectMapper().readValue(resp, new TypeReference<List<JsonCard>>() {});
+    @Test
+    public void newMatchWithFourPlayers() throws Exception {
+        UUID expectedId = UUID.randomUUID();
+        when(unoService.newMatch(any(List.class))).thenReturn(expectedId);
+
+        mockMvc.perform(post("/newmatch")
+                .param("players", "A", "B", "C", "D"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void exceptionHandlerReturns500() throws Exception {
+        doThrow(new IllegalArgumentException("Test error")).when(unoService)
+                .drawCard(any(UUID.class), anyString());
+
+        mockMvc.perform(post("/draw/{matchId}/{player}", testMatchId, testPlayer))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Test error"));
+    }
+
+    @Test
+    public void playInvalidJsonFormat() throws Exception {
+        mockMvc.perform(post("/play/{matchId}/{player}", testMatchId, testPlayer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("invalid json format"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    public void activeCardWithInvalidUUID() throws Exception {
+        mockMvc.perform(get("/activecard/{matchId}", "not-a-valid-uuid"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    public void wrongMethodForActiveCard() throws Exception {
+        mockMvc.perform(post("/activecard/{matchId}", testMatchId))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    public void wrongMethodForPlayerHand() throws Exception {
+        mockMvc.perform(delete("/playerhand/{matchId}", testMatchId))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    public void newMatchReturnsValidResponse() throws Exception {
+        UUID expectedId = UUID.randomUUID();
+        when(unoService.newMatch(any(List.class))).thenReturn(expectedId);
+
+        mockMvc.perform(post("/newmatch")
+                .param("players", "TestPlayer"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    public void playerHandWithEmptyResponse() throws Exception {
+        when(unoService.playerHand(testMatchId)).thenReturn(List.of());
+
+        mockMvc.perform(get("/playerhand/{matchId}", testMatchId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    public void drawCardHandlesException() throws Exception {
+        doThrow(new RuntimeException("Game error")).when(unoService)
+                .drawCard(any(UUID.class), anyString());
+
+        mockMvc.perform(post("/draw/{matchId}/{player}", testMatchId, testPlayer))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Game error"));
+    }
+
+    @Test
+    public void playWithWildCard() throws Exception {
+        JsonCard wildCard = new JsonCard("Red", null, "WildCard", true);
+
+        mockMvc.perform(post("/play/{matchId}/{player}", testMatchId, testPlayer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(wildCard)))
+                .andExpect(status().isOk());
     }
 } 

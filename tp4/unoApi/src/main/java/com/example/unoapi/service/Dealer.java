@@ -14,7 +14,7 @@ public class Dealer {
         ArrayList<Card> deck = new ArrayList<>();
         
         // Add colored cards for each color (red, blue, green, yellow)
-        String[] colors = {"red", "blue", "green", "yellow"};
+        String[] colors = {"Red", "Blue", "Green", "Yellow"};
         
         for (String color : colors) {
             // Add one "0" card per color
@@ -44,56 +44,22 @@ public class Dealer {
         
         // Add 4 Wild Draw Four cards (using WildCard for now)
         for (int i = 0; i < 4; i++) {
-            deck.add(new WildCard()); // TODO: Implement WildDraw4Card if needed
-        }
-        
-        return deck; // Sin mezclar
-    }
-
-    public List<Card> shuffledDeck() {
-        ArrayList<Card> deck = new ArrayList<>();
-        
-        // Add colored cards for each color (red, blue, green, yellow)
-        String[] colors = {"red", "blue", "green", "yellow"};
-        
-        for (String color : colors) {
-            // Add one "0" card per color
-            deck.add(new NumberCard(color, 0));
-            
-            // Add two cards of each number 1-9 per color
-            for (int number = 1; number <= 9; number++) {
-                deck.add(new NumberCard(color, number));
-                deck.add(new NumberCard(color, number));
-            }
-            
-            // Add two action cards of each type per color
-            deck.add(new SkipCard(color));
-            deck.add(new SkipCard(color));
-            
-            deck.add(new Draw2Card(color));
-            deck.add(new Draw2Card(color));
-            
-            deck.add(new ReverseCard(color));
-            deck.add(new ReverseCard(color));
-        }
-        
-        // Add 4 Wild cards
-        for (int i = 0; i < 4; i++) {
             deck.add(new WildCard());
-        }
-        
-        // Add 4 Wild Draw Four cards (using WildCard for now)
-        for (int i = 0; i < 4; i++) {
-            deck.add(new WildCard()); // TODO: Implement WildDraw4Card if needed
         }
         
         Collections.shuffle(deck);
         return deck;
     }
 
+    public List<Card> shuffledDeck() {
+        List<Card> deck = new ArrayList<>(fullDeck());
+        Collections.shuffle(deck);
+        return deck;
+    }
+
     public List<Card> reducedDeck() {
         ArrayList<Card> deck = new ArrayList<>();
-        String[] colors = {"red", "blue", "green", "yellow"};
+        String[] colors = {"Red", "Blue", "Green", "Yellow"};
         
         for (String color : colors) {
             // Reduced deck for testing - fewer cards per type

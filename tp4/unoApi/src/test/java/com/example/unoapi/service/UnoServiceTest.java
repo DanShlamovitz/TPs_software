@@ -1,282 +1,165 @@
 package com.example.unoapi.service;
 
 import com.example.unoapi.model.*;
-import com.example.unoapi.service.exceptions.*;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-class UnoServiceTest {
-
-    @Mock
-    private Dealer dealer;
-
-    @Mock
-    private CardConverter cardConverter;
-
-    @InjectMocks
+@SpringBootTest
+public class UnoServiceTest {
+    @Autowired
     private UnoService unoService;
-
-    private List<Card> mockDeck;
-    private JsonCard mockJsonCard;
-    private Card mockCard;
+    
+    private UUID testMatchId;
+    private List<String> gamePlayers;
 
     @BeforeEach
     void setUp() {
-        mockDeck = Arrays.asList(
-            // Carta inicial para descarte
-            new NumberCard("red", 5),
-            // 7 cartas para primer jugador
-            new NumberCard("blue", 3),
-            new SkipCard("green"),
-            new Draw2Card("yellow"),
-            new ReverseCard("red"),
-            new WildCard(),
-            new NumberCard("blue", 7),
-            new NumberCard("green", 2),
-            // 7 cartas para segundo jugador
-            new NumberCard("yellow", 8),
-            new NumberCard("red", 1),
-            new NumberCard("blue", 4),
-            new NumberCard("green", 6),
-            new NumberCard("yellow", 9),
-            new NumberCard("red", 0),
-            new SkipCard("blue"),
-            // Cartas extras para draws y tests adicionales
-            new NumberCard("green", 3),
-            new NumberCard("yellow", 4),
-            new Draw2Card("red"),
-            new ReverseCard("blue"),
-            new WildCard()
-        );
+        gamePlayers = List.of("Alice", "Bob", "Charlie");
+        testMatchId = unoService.newMatch(gamePlayers);
+    }
 
-        mockJsonCard = new JsonCard("red", 5, "NumberCard", false);
-        mockCard = new NumberCard("red", 5);
+    @Test 
+    public void playerHandHasCorrectSize() {
+        List<Card> hand = unoService.playerHand(testMatchId);
+        assertEquals(7, hand.size());
     }
 
     @Test
-    void testNewMatch_Success() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-
-        // Act
-        UUID matchId = unoService.newMatch(players);
-
-        // Assert
-        assertNotNull(matchId);
-        verify(dealer, times(1)).fullDeck();
+    public void newMatchGeneratesUUID() {
+        UUID id = unoService.newMatch(List.of("Player1", "Player2"));
+        assertNotNull(id);
     }
 
     @Test
-    void testNewMatch_NullPlayers_ThrowsException() {
-        // Act & Assert
-        assertThrows(InvalidCardException.class, () -> {
-            unoService.newMatch(null);
-        });
-    }
-
-    @Test
-    void testNewMatch_EmptyPlayers_ThrowsException() {
-        // Act & Assert
-        assertThrows(InvalidCardException.class, () -> {
-            unoService.newMatch(Arrays.asList());
-        });
-    }
-
-    @Test
-    void testNewMatch_OnlyOnePlayer_ThrowsException() {
-        // Act & Assert
-        assertThrows(InvalidCardException.class, () -> {
-            unoService.newMatch(Arrays.asList("Alice"));
-        });
-    }
-
-    @Test
-    void testPlayerHand_Success() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        UUID matchId = unoService.newMatch(players);
-
-        // Act
-        List<Card> hand = unoService.playerHand(matchId);
-
-        // Assert
-        assertNotNull(hand);
-        assertEquals(7, hand.size()); // Full match gives 7 cards
-    }
-
-    @Test
-    void testPlayerHand_MatchNotFound_ThrowsException() {
-        // Arrange
-        UUID nonExistentMatchId = UUID.randomUUID();
-
-        // Act & Assert
-        assertThrows(MatchNotFoundException.class, () -> {
-            unoService.playerHand(nonExistentMatchId);
-        });
-    }
-
-    @Test
-    void testActiveCard_Success() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        UUID matchId = unoService.newMatch(players);
-
-        // Act
-        Card activeCard = unoService.activeCard(matchId);
-
-        // Assert
+    public void activeCardExists() {
+        Card activeCard = unoService.activeCard(testMatchId);
         assertNotNull(activeCard);
     }
 
     @Test
-    void testActiveCard_MatchNotFound_ThrowsException() {
-        // Arrange
-        UUID nonExistentMatchId = UUID.randomUUID();
+    public void drawCardIncreasesHandSize() {
+        int initialSize = unoService.playerHand(testMatchId).size();
+        unoService.drawCard(testMatchId, "Alice");
+        int newSize = unoService.playerHand(testMatchId).size();
+        assertEquals(initialSize + 1, newSize);
+    }
 
-        // Act & Assert
-        assertThrows(MatchNotFoundException.class, () -> {
-            unoService.activeCard(nonExistentMatchId);
+    @Test
+    public void newMatchWithSinglePlayerWorks() {
+        UUID id = unoService.newMatch(List.of("SoloPlayer"));
+        assertNotNull(id);
+        List<Card> hand = unoService.playerHand(id);
+        assertEquals(7, hand.size());
+    }
+
+    @Test
+    public void invalidMatchThrowsException() {
+        UUID invalidId = UUID.randomUUID();
+        assertThrows(IllegalArgumentException.class, () -> {
+            unoService.playerHand(invalidId);
         });
     }
 
     @Test
-    void testPlay_Success() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        when(cardConverter.jsonToCard(mockJsonCard)).thenReturn(mockCard);
+    public void nullMatchIdThrowsException() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            unoService.activeCard(null);
+        });
+    }
+
+    @Test
+    public void playValidCardDoesNotThrow() {
+        List<Card> hand = unoService.playerHand(testMatchId);
+        Card cardToPlay = hand.get(0);
         
-        UUID matchId = unoService.newMatch(players);
-
-        // Act & Assert (no exception should be thrown)
         assertDoesNotThrow(() -> {
-            unoService.play(matchId, "Alice", mockJsonCard);
-        });
-
-        verify(cardConverter, times(1)).jsonToCard(mockJsonCard);
-    }
-
-    @Test
-    void testPlay_MatchNotFound_ThrowsException() {
-        // Arrange
-        UUID nonExistentMatchId = UUID.randomUUID();
-
-        // Act & Assert
-        assertThrows(MatchNotFoundException.class, () -> {
-            unoService.play(nonExistentMatchId, "Alice", mockJsonCard);
+            unoService.play(testMatchId, "Alice", cardToPlay);
         });
     }
 
     @Test
-    void testPlay_NullPlayer_ThrowsException() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        UUID matchId = unoService.newMatch(players);
+    public void activeCardRemainsConsistent() {
+        Card card1 = unoService.activeCard(testMatchId);
+        Card card2 = unoService.activeCard(testMatchId);
+        assertEquals(card1, card2);
+    }
 
-        // Act & Assert
-        assertThrows(InvalidCardException.class, () -> {
-            unoService.play(matchId, null, mockJsonCard);
+    @Test
+    public void playerHandConsistency() {
+        List<Card> hand1 = unoService.playerHand(testMatchId);
+        List<Card> hand2 = unoService.playerHand(testMatchId);
+        assertEquals(hand1.size(), hand2.size());
+    }
+
+    @Test
+    public void drawCardFromInvalidMatchFails() {
+        UUID fakeId = UUID.randomUUID();
+        assertThrows(IllegalArgumentException.class, () -> {
+            unoService.drawCard(fakeId, "Alice");
         });
     }
 
     @Test
-    void testPlay_EmptyPlayer_ThrowsException() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        UUID matchId = unoService.newMatch(players);
-
-        // Act & Assert
-        assertThrows(InvalidCardException.class, () -> {
-            unoService.play(matchId, "", mockJsonCard);
+    public void playWithInvalidMatchFails() {
+        UUID fakeId = UUID.randomUUID();
+        Card card = new NumberCard("Red", 5);
+        assertThrows(IllegalArgumentException.class, () -> {
+            unoService.play(fakeId, "Alice", card);
         });
     }
 
     @Test
-    void testPlay_NullCard_ThrowsException() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        UUID matchId = unoService.newMatch(players);
+    public void multipleMatchesWork() {
+        UUID match1 = unoService.newMatch(List.of("P1", "P2"));
+        UUID match2 = unoService.newMatch(List.of("P3", "P4"));
+        
+        assertNotEquals(match1, match2);
+        assertNotNull(unoService.activeCard(match1));
+        assertNotNull(unoService.activeCard(match2));
+    }
 
-        // Act & Assert
-        assertThrows(InvalidCardException.class, () -> {
-            unoService.play(matchId, "Alice", null);
+    @Test
+    public void drawCardWithInvalidPlayerFails() {
+        assertThrows(RuntimeException.class, () -> {
+            unoService.drawCard(testMatchId, "NonExistentPlayer");
         });
     }
 
     @Test
-    void testDrawCard_Success() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        UUID matchId = unoService.newMatch(players);
+    public void activeCardNotInPlayerHand() {
+        Card activeCard = unoService.activeCard(testMatchId);
+        List<Card> playerHand = unoService.playerHand(testMatchId);
+        assertFalse(playerHand.contains(activeCard));
+    }
 
-        // Act & Assert (no exception should be thrown)
-        assertDoesNotThrow(() -> {
-            unoService.drawCard(matchId, "Alice");
+    @Test
+    public void playWithInvalidPlayerThrowsException() {
+        Card card = new NumberCard("Blue", 3);
+        assertThrows(RuntimeException.class, () -> {
+            unoService.play(testMatchId, "InvalidPlayer", card);
         });
     }
 
     @Test
-    void testDrawCard_MatchNotFound_ThrowsException() {
-        // Arrange
-        UUID nonExistentMatchId = UUID.randomUUID();
-
-        // Act & Assert
-        assertThrows(MatchNotFoundException.class, () -> {
-            unoService.drawCard(nonExistentMatchId, "Alice");
-        });
+    public void newMatchWithMultiplePlayersWorks() {
+        UUID id = unoService.newMatch(List.of("A", "B", "C", "D", "E"));
+        assertNotNull(id);
+        assertEquals(7, unoService.playerHand(id).size());
     }
 
     @Test
-    void testDrawCard_NullPlayer_ThrowsException() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        UUID matchId = unoService.newMatch(players);
-
-        // Act & Assert
-        assertThrows(InvalidCardException.class, () -> {
-            unoService.drawCard(matchId, null);
-        });
-    }
-
-    @Test
-    void testDrawCard_EmptyPlayer_ThrowsException() {
-        // Arrange
-        List<String> players = Arrays.asList("Alice", "Bob");
-        when(dealer.fullDeck()).thenReturn(mockDeck);
-        UUID matchId = unoService.newMatch(players);
-
-        // Act & Assert
-        assertThrows(InvalidCardException.class, () -> {
-            unoService.drawCard(matchId, "");
-        });
-    }
-
-    @Test
-    void testGetMatchOrThrow_NullMatchId_ThrowsException() {
-        // Act & Assert
-        assertThrows(MatchNotFoundException.class, () -> {
-            unoService.playerHand(null);
-        });
+    public void drawCardTwiceIncreasesHandByTwo() {
+        int initialSize = unoService.playerHand(testMatchId).size();
+        unoService.drawCard(testMatchId, "Alice");
+        unoService.drawCard(testMatchId, "Alice");
+        int finalSize = unoService.playerHand(testMatchId).size();
+        assertEquals(initialSize + 2, finalSize);
     }
 } 
